@@ -2,11 +2,77 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>首页</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>导航主页</title>
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+body{
+  min-height:100vh;
+  background: linear-gradient(135deg, #eef2ff 0%, #f0f9ff 100%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.wrap{
+  width:100%;
+  max-width:560px;
+}
+.title{
+  text-align:center;
+  font-size:32px;
+  color:#1e293b;
+  margin-bottom:48px;
+  font-weight:600;
+  letter-spacing:1px;
+}
+.card{
+  background:#ffffff;
+  border-radius:20px;
+  padding:30px;
+  margin-bottom:22px;
+  box-shadow:0 4px 20px rgba(37, 99, 235, 0.09);
+  border:1px solid rgba(255,255,255,0.7);
+  transition: all 0.3s ease;
+}
+.card:hover{
+  transform: translateY(-4px);
+  box-shadow:0 8px 30px rgba(37, 99, 235, 0.15);
+}
+.card a{
+  text-decoration:none;
+  font-size:22px;
+  color:#1d4ed8;
+  font-weight:500;
+  display:block;
+}
+.card p{
+  margin-top:10px;
+  color:#64748b;
+  font-size:15px;
+  line-height:1.5;
+}
+</style>
 </head>
 <body>
-<h2>导航页</h2>
-<p><a href="./paiban/">蒙古包排班</a></p>
-<p><a href="./jijjin/">Edge集锦</a></p>
+<div class="wrap">
+  <h1 class="title">导航主页</h1>
+
+  <div class="card">
+    <a href="./paiban/">📅 蒙古包排班表</a>
+    <p>日历查看，快速查询值班安排</p>
+  </div>
+
+  <div class="card">
+    <a href="./jijin/">🔗 集锦链接工具</a>
+    <p>网页收藏链接整理、查看工具</p>
+  </div>
+
+</div>
 </body>
 </html>
