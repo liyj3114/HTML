@@ -1,0 +1,319 @@
+[蒙古包排班.html](https://github.com/user-attachments/files/33386625/default.html)
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>蒙古包值班日历</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{padding:12px;background:#f5f7fa;font-size:15px}
+.page{max-width:480px;margin:0 auto}
+.box{background:#fff;border-radius:14px;padding:14px;margin-bottom:12px}
+h3{font-size:17px;margin-bottom:10px}
+.row{display:flex;gap:8px;margin:8px 0;align-items:center}
+input,select{border:1px solid #d9d9d9;border-radius:9px;padding:9px 10px;font-size:15px;flex:1;min-width:0;background:#fff}
+button{background:#2563eb;color:#fff;border:none;border-radius:9px;padding:10px 12px;font-size:14px}
+button.ghost{background:#eef2ff;color:#2563eb}
+button:active{opacity:.8}
+.btns{display:flex;gap:10px;flex-wrap:wrap;padding:4px 0}
+.btns button{flex:1;padding:12px 10px}
+#result{margin-top:10px;line-height:1.65;font-size:14px;white-space:pre-line}
+
+/* 日历 进一步压缩 */
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.cal-title{font-size:20px;font-weight:bold}
+.cal-nav{display:flex;gap:8px}
+.cal-nav button{padding:6px 10px}
+.week-header{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
+.week-header>div{text-align:center;font-size:12px;color:#666;padding:2px 0}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-cell{min-height:52px;border:1px solid #e8e8e8;border-radius:8px;padding:2px 1px;text-align:center;background:#fff;display:flex;flex-direction:column;justify-content:center}
+.cal-cell.empty{border:none;background:transparent}
+.cal-cell .daynum{font-size:16px;font-weight:500;margin-bottom:1px}
+.cal-cell .duty-name{font-size:10px;color:#333;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 选中人员整格红色 */
+.cal-cell.active{background:#fecdd3;border-color:#f43f5e}
+.cal-cell.active .duty-name{color:#b91c1c;font-weight:600}
+/* 今天绿色边框底色 */
+.cal-cell.today{border:2px solid #22c55e;background:#f0fdf4}
+/* 过期的日子变灰 */
+.cal-cell.past{background:#f7f7f7;opacity:0.6}
+textarea{width:100%;border:1px solid #d9d9d9;border-radius:9px;padding:10px;font-size:14px;min-height:72px}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="box">
+    <div class="cal-header">
+      <div class="cal-title" id="calTitle">2026年10月</div>
+      <div class="cal-nav">
+        <button class="ghost" onclick="changeMonth(-1)">上月</button>
+        <button class="ghost" onclick="changeMonth(1)">下月</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <select id="selPerson"></select>
+      <button onclick="showToday()">今天</button>
+    </div>
+
+    <div class="week-header">
+      <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
+    </div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+
+    <div id="result"></div>
+  </div>
+
+  <div class="box">
+    <h3>功能按钮</h3>
+    <div class="btns">
+      <button onclick="checkDay()">查询该天</button>
+      <button onclick="findNext()">下次值班</button>
+    </div>
+    <div class="btns">
+      <button onclick="copyMyMonth()">复制本月我的班</button>
+      <button onclick="copyFullMonth()">导出整月排班</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <input id="y" type="number" placeholder="年">
+      <input id="m" type="number" placeholder="月">
+      <input id="d" type="number" placeholder="日">
+    </div>
+  </div>
+
+  <div class="box">
+    <h3>轮班名单设置</h3>
+    <textarea id="rotateText"></textarea>
+    <div class="row">
+      <button onclick="loadRotateList()">应用名单</button>
+      <span class="small" style="font-size:13px;color:#555">修改后点应用生效</span>
+    </div>
+  </div>
+</div>
+
+<script>
+let rotateList = ["牛苑茹","王羽薇","李苑嘉","贾文博","陆敏","逯鹏图"];
+const rotateStart = new Date(2026,9,13);
+// 11号及之前不显示任何名字
+const cutoffDay = new Date(2026,9,11);
+
+let viewYear, viewMonth;
+
+function initUi(){
+  const today = new Date();
+  viewYear = today.getFullYear();
+  viewMonth = today.getMonth()+1;
+  document.getElementById("y").value = viewYear;
+  document.getElementById("m").value = viewMonth;
+  document.getElementById("d").value = today.getDate();
+  document.getElementById("rotateText").value = rotateList.join("，");
+  fillPersonSelect();
+  renderCalendar();
+}
+
+function fillPersonSelect(){
+  const sel = document.getElementById("selPerson");
+  sel.innerHTML = "";
+  const all = [...new Set(["刘璐",...rotateList])];
+  all.forEach(p=>{
+    const o = document.createElement("option");
+    o.value = p; o.textContent = p;
+    if(p === "李苑嘉") o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function loadRotateList(){
+  const txt = document.getElementById("rotateText").value;
+  rotateList = txt.split(/[,，]/).map(s=>s.trim()).filter(Boolean);
+  fillPersonSelect();
+  renderCalendar();
+  out("✅名单已更新");
+}
+
+function toDateOnly(d){
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function getDuty(dd){
+  dd = toDateOnly(dd);
+  //11号及之前全部空白
+  if(dd <= cutoffDay) return "";
+
+  const w = dd.getDay();
+  //周一、周三固定刘璐
+  if(w === 1 || w === 3) return "刘璐";
+
+  //轮班日期：周二、四、五、六、日
+  const rotateWeek = [2,4,5,6,0];
+  if(!rotateWeek.includes(w)) return "";
+
+  if(dd < toDateOnly(rotateStart)) return "";
+
+  let count = 0;
+  let cur = toDateOnly(rotateStart);
+  while(cur.getTime() < dd.getTime()){
+    cur.setDate(cur.getDate()+1);
+    if(rotateWeek.includes(cur.getDay())) count++;
+  }
+  const idx = count % rotateList.length;
+  return rotateList[idx];
+}
+
+function sameDay(a,b){
+  return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
+}
+
+function renderCalendar(){
+  document.getElementById("calTitle").textContent = `${viewYear}年${viewMonth}月`;
+  document.getElementById("y").value = viewYear;
+  document.getElementById("m").value = viewMonth;
+
+  const grid = document.getElementById("calendarGrid");
+  grid.innerHTML = "";
+
+  const firstDayOfMonth = new Date(viewYear, viewMonth-1, 1);
+  let weekStart = firstDayOfMonth.getDay();
+  const offset = (weekStart + 6) %7;
+
+  for(let i=0;i<offset;i++){
+    const emptyCell = document.createElement("div");
+    emptyCell.className = "cal-cell empty";
+    grid.appendChild(emptyCell);
+  }
+
+  const today = toDateOnly(new Date());
+  const selPerson = document.getElementById("selPerson").value;
+  const lastDate = new Date(viewYear, viewMonth,0);
+  let loopDate = new Date(viewYear, viewMonth-1,1);
+
+  while(loopDate <= lastDate){
+    const cell = document.createElement("div");
+    cell.className = "cal-cell";
+    const dutyName = getDuty(loopDate);
+    const currentDateOnly = toDateOnly(loopDate);
+
+    //过去日期变灰
+    if(currentDateOnly < today){
+      cell.classList.add("past");
+    }
+    //今天绿色边框
+    if(sameDay(currentDateOnly, today)){
+      cell.classList.add("today");
+    }
+    //选中的人，整格变红
+    if(dutyName === selPerson && dutyName){
+      cell.classList.add("active");
+    }
+
+    const dayNumDiv = document.createElement("div");
+    dayNumDiv.className = "daynum";
+    dayNumDiv.textContent = loopDate.getDate();
+
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "duty-name";
+    nameDiv.textContent = dutyName;
+
+    cell.appendChild(dayNumDiv);
+    if(dutyName) cell.appendChild(nameDiv);
+    grid.appendChild(cell);
+
+    loopDate.setDate(loopDate.getDate()+1);
+  }
+}
+
+function changeMonth(n){
+  const newMonthDate = new Date(viewYear, viewMonth-1 + n,1);
+  viewYear = newMonthDate.getFullYear();
+  viewMonth = newMonthDate.getMonth()+1;
+  renderCalendar();
+}
+
+function showToday(){
+  const now = new Date();
+  viewYear = now.getFullYear();
+  viewMonth = now.getMonth()+1;
+  document.getElementById("d").value = now.getDate();
+  renderCalendar();
+  const p = getDuty(now);
+  out(`📆今天 ${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}\n值班人员：${p||"无"}`);
+}
+
+function checkDay(){
+  const y=+document.getElementById("y").value;
+  const m=+document.getElementById("m").value;
+  const day=+document.getElementById("d").value;
+  if(!y||!m||!day) return out("⚠️请填写完整年月日");
+  const dd = new Date(y,m-1,day);
+  if(isNaN(dd)) return out("⚠️请填写完整年月日");
+  const p = getDuty(dd);
+  const selP = document.getElementById("selPerson").value;
+  viewYear = y; viewMonth = m;
+  renderCalendar();
+  if(p === selP){
+    out(`✅${y}-${m}-${day} 轮到【${selP}】值班`);
+  } else {
+    out(`📅${y}-${m}-${day} 值班：${p||"无"}\n不是【${selP}】的班`);
+  }
+}
+
+function findNext(){
+  const selP = document.getElementById("selPerson").value;
+  let now = toDateOnly(new Date());
+  for(let i=1;i<1200;i++){
+    const t = new Date(now);
+    t.setDate(now.getDate()+i);
+    if(getDuty(t) === selP){
+      out(`🔔【${selP}】下一次值班：\n${t.getFullYear()}-${t.getMonth()+1}-${t.getDate()}\n⏱还有 ${i} 天`);
+      return;
+    }
+  }
+  out("未找到班次");
+}
+
+function copyMyMonth(){
+  const y=+document.getElementById("y").value;
+  const m=+document.getElementById("m").value;
+  const selP = document.getElementById("selPerson").value;
+  if(!y||!m) return out("⚠️请输入年月");
+  const list=[];
+  const d=new Date(y,m-1,1);
+  while(d.getMonth()===m-1){
+    if(getDuty(d)===selP) list.push(`${y}-${m}-${d.getDate()}`);
+    d.setDate(d.getDate()+1);
+  }
+  const text = `【${selP}】${y}年${m}月值班：\n` + list.join("\n");
+  copyText(text);
+}
+
+function copyFullMonth(){
+  const y=+document.getElementById("y").value;
+  const m=+document.getElementById("m").value;
+  if(!y||!m) return out("⚠️请输入年月");
+  const arr=[];
+  const d=new Date(y,m-1,1);
+  while(d.getMonth()===m-1){
+    arr.push(`${m}月${d.getDate()}日｜${getDuty(d)||"—"}`);
+    d.setDate(d.getDate()+1);
+  }
+  copyText(`蒙古包${y}年${m}月排班\n` + arr.join("\n"));
+}
+
+function copyText(text){
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(()=>out("✅已复制\n"+text)).catch(()=>out(text));
+  } else {
+    out(text);
+  }
+}
+
+function out(s){document.getElementById("result").innerHTML = s;}
+
+document.getElementById("selPerson").addEventListener("change", renderCalendar);
+
+initUi();
+</script>
+</body>
+</html>
